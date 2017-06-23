@@ -1,0 +1,136 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$ $$>a<c:\tools\@scripts\windbg\load_code_to_kernel_memory.wdbg <src code> <mem size> <offset start routine>
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload /f
+}
+
+$$set a breakpoint on a common function that is executed frequently (NtCreateFile for example) for hijacking the thread for a while
+
+ba e1 nt!NtCreateFile
+g
+
+.printf "${$arg1}"
+.printf "${$arg2}"
+.printf "${$arg3}"
+
+bc *
+
+$$save original esp register and stack parameters that we are going to overwrite when calling ExAllocatePool and PsCreateSystemThread
+
+r @$t19 = (poi esp)
+r @$t18 = (poi esp+4)
+r @$t17 = (poi esp+8)
+r @$t16 = (poi esp+c)
+r @$t15 = (poi esp+10)
+r @$t14 = (poi esp+14)
+r @$t13 = (poi esp+18)
+r @$t12 = (poi esp+1c)
+r @$t11 = esp
+
+$$change the stack with the parameters that we need for ExAllocatePool
+
+ed (esp+4) 0
+ed (esp+8) ${$arg2}
+
+$$hijack the thread running on NtCreateFile to execute ExAllocatePool
+
+u nt!ExAllocatePool
+dd esp
+r eip = nt!ExAllocatePool
+
+$$steps until the ret instruction is found. We cant execute step out (gu) because we would get a 0x30 bugcheck, this is the reason:
+$$  "This bug check occurs when there's a stack underflow detected when restoring context coming out of a trap. There's a check to 
+$$  validate that the current ESP is less than the ESP saved in the trap frame. If current_esp < saved_esp, bugcheck. "
+
+.while (1)
+{
+    p
+    r @$t10 = (poi eip)
+    r @$t10 = @$t10 & 0x000000ff
+    
+    .if (@$t10 == 0xc2)
+    {
+        .break
+    }
+}
+
+r @$t0 = eax
+
+.printf "allocated mem: %x\n", @$t0
+
+$$load code from file to allocated memory
+
+$$careful: .readmem will read blocks of 0x1000 bytes. For example, if your file to load has 0x2800 bytes, .readmem will load 0x2000 bytes only. 
+$$You will need to complete the file with 0x800 additional trash bytes to load the full code
+
+.readmem ${$arg1} @$t0
+
+$$ @$t1 = allocated mem membase, code is read
+
+r @$t1 = @$t0
+
+$$Now we are going to create a kernel thread at @$t1 + arg3 (membase + startroutine_offset)
+
+$$ NTSTATUS PsCreateSystemThread(
+$$   _Out_     PHANDLE            ThreadHandle,
+$$   _In_      ULONG              DesiredAccess,
+$$   _In_opt_  POBJECT_ATTRIBUTES ObjectAttributes,
+$$   _In_opt_  HANDLE             ProcessHandle,
+$$   _Out_opt_ PCLIENT_ID         ClientId,
+$$   _In_      PKSTART_ROUTINE    StartRoutine,
+$$   _In_opt_  PVOID              StartContext
+$$ );
+
+ed (esp+1c) 0
+ed (esp+18) @$t1+${$arg3}
+ed (esp+14) 0
+ed (esp+10) 0
+ed (esp+c) 0
+ed (esp+8) 0
+$$ThreadHandle inout, we use the memory of the parameter StartContext that we dont need
+ed (esp+4) (esp+1c) 
+
+$$set a breakpoint where the thread is going to be created
+
+ba e1 @$t1+${$arg3}
+
+u nt!PsCreateSystemThread
+dd esp
+r eip = nt!PsCreateSystemThread
+
+$$again steps until ret instruction is found
+
+.while (1)
+{
+    p
+    r @$t10 = (poi eip)
+    r @$t10 = @$t10 & 0x000000ff
+    
+    .if (@$t10 == 0xc2)
+    {
+        .break
+    }
+}
+
+$$restore original registers and stack to continue the execution with no problems
+
+r eip = nt!NtCreateFile
+r esp = @$t11 
+ed esp @$t19
+ed (esp+4) @$t18
+ed (esp+8) @$t17
+ed (esp+c) @$t16 
+ed (esp+10) @$t15 
+ed (esp+14) @$t14 
+ed (esp+18) @$t13 
+ed (esp+1c) @$t12 
+
+g
