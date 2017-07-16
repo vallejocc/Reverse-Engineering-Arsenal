@@ -1,0 +1,64 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$  $$>a<change_process_name.wdbg <main module of the process to be renamed>
+$$
+$$  i.e. if we want to rename vmtoolsd.exe:
+$$
+$$      $$>a<change_process_name.wdbg vmtoolsd.exe   ->  it will rename the process to vmtoolse
+$$
+$$  The script increase +1 the last letter of the name. If you need other or additional modifications, it is easy to modify the script
+
+aS stage @$t19
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    r stage = 2
+    
+    .printf "xxxx"
+    
+    .foreach (processes_tok { !process /m ${$arg1} 0 0 })
+    {
+        .if($scmp("${processes_tok}","PROCESS")==0)
+        {
+            .if(${stage}==2)
+            {
+                $$stage==2 is used to skip the first apparition of PROCESS string in the results of !process 0 0
+                r stage = 0
+            }
+            .else
+            {            
+                r stage = 1
+            }
+        }
+        .elsif(${stage}==1)
+        {
+            .printf /D "<b>Renaming process ${processes_tok}</b>\n"
+            
+            r stage = 0
+
+            r $t4 = ${processes_tok}
+            
+            r $t0 = @@c++( ( ( nt!_EPROCESS * ) @$t4 )->SeAuditProcessCreationInfo.ImageFileName )
+            r $t1 = (poi @$t0)&0xffff
+            r $t2 = (poi (@$t0+2))&0xffff
+            r $t3 = (poi (@$t0+@@c++(#FIELD_OFFSET(nt!_UNICODE_STRING, Buffer))))
+            db ($t3 + $t1 - a)
+            $$go to end of buffer of _UNICODE_STRING, and go back 0xa bytes. For example <filepath....><lastbyte>.exe. We locate on lastbyte, and we increase 1 the value of last byte
+            $$For example <fullpath>\vmtoolsd.exe, will be modified to <fullpath>\vmtoolse.exe
+            eb ($t3 + $t1 - a) ((poi($t3 + $t1 - a)&0xff)+1)
+            
+            !process @$t4 0
+            
+        }
+    }
+}

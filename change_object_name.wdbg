@@ -1,0 +1,77 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$  $$>a<change_object_name.wdbg <full object path + name>
+$$
+$$      i.e. pafish tries to open vmware devices "\\\\.\\HGFS" and "\\\\.\\vmci", if can use this script to rename these devices in this way:
+$$
+$$          change_object_name.wdbg \\global??\\hgfs  (in this case we rename the symboliclink)   \\global??\\hgfs -> \\global??\\agfs
+$$          change_object_name.wdbg \\devices\\vmci   (in this case we rename the deviceobject)   \\devices\\vmci -> \\devices\\amci
+$$
+$$  The script changes the first letter of the name (setting 'a'). If you need other letter or additional modifications, it is easy to modify the script
+$$
+
+aS stage @$t19
+aS x64arch $t18
+aS objhnameinfodisp $t17
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    $$is x64?
+    r x64arch = 0; 
+    r objhnameinfodisp = 0x10;
+    .foreach( tok { .effmach } ) 
+    {
+        .if($scmp("${tok}","x64")==0)
+        {
+            r x64arch = 1;
+            r objhnameinfodisp = 0x20;
+            .break;
+        };
+    };
+}
+
+r stage = 0
+
+.foreach( tok { !object "${$arg1}" } )
+{
+    .printf "${tok}\r\n"    
+
+    .if(${stage}==1)
+    {
+        .echo ${tok}
+        dt _OBJECT_HEADER ${tok}        
+        r $t0 = ${tok}        
+        dt _OBJECT_HEADER_NAME_INFO (@$t0-${objhnameinfodisp})
+        $$ $t0 -> OBJECT_HEADER_NAME_INFO
+        r $t0 = @$t0 - ${objhnameinfodisp}
+        $$ $t0 -> OBJECT_HEADER_NAME_INFO.UNICODE_STRING
+        r $t0 = @$t0 + @@c++(#FIELD_OFFSET(_OBJECT_HEADER_NAME_INFO, Name))
+        $$ $t0 -> OBJECT_HEADER_NAME_INFO.UNICODE_STRING.Buffer
+        r $t0 = @$t0 + @@c++(#FIELD_OFFSET(_UNICODE_STRING, Buffer))
+        db poi $t0
+        $$change the first letter for 'a'
+        eb (poi $t0) 'a'
+        .printf "--------------------\r\n"
+        db poi $t0
+        .break
+    }    
+    
+    .if(${stage}==0)
+    {
+        .if($scmp("${tok}","ObjectHeader:")==0)
+        {
+            r stage = 1
+        }
+    }
+}
+

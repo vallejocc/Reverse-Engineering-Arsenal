@@ -1,0 +1,34 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$  $$>a<anti_antidebug_rdtsc.wdbg
+$$
+$$  This script works in similar way than anti-rdtsc tools that install a driver.
+$$  
+$$  The script enables flag 2 of cr4: TSD Time Stamp Disable. In this way rdtsc is a privileged instruction. 
+$$  After that, it enables the option  for stopping when user mode exception (gflag +sue +soe, gflags 0x20000001).
+$$  Then we enable 0xc0000096 -> privileged instruction.    
+$$  In this way, when rdtsc is executed by an application, an exception will occur and windbg will catch the exception.
+$$  In that moment, the script checks the ins code of rdtsc, 0x310f. If it is a rdtsc instruction, it skips the instruction ip = ip+2.
+$$  Finally it sets edx = 0, and eax = last_counter+1.
+$$  Applications execution rdtsc will see an increment of 1 each rdtsc execution.
+$$
+
+
+$$set rdtsc as priv instruction, then catch exceptions for priv instructions and skip rdtsc(eip=eip+2) and set edx:eax = last rdtsc returned value +1
+$$use $t9 for counter
+r $t9 = 0
+$$rdtsc = privileged instruction
+r cr4 = cr4 | 4
+$$Stop on exception
+!gflag +soe
+$$Stop on unhandled user-mode exception
+!gflag +sue
+$$disable access violation (we have enabled exception in user mode, and access violation will cause lot of exceptions)
+sxd av
+$$we enable to catch privileged instructions execution (we have converted rdtsc in priv ins with cr4)
+$$in this moment we check if it is rdtsc, and in this case, we jump over the instruction and we set eax=0 edx=0
+sxe -c ".if((poi(eip)&0x0000ffff)==0x310f){.printf \"rdtsc\r\n\";r ip = ip+2;r eax=@$t9;r edx=0;r $t9=@$t9+1; gh;}" c0000096
