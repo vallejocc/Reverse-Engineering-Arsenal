@@ -31,4 +31,4 @@ $$disable access violation (we have enabled exception in user mode, and access v
 sxd av
 $$we enable to catch privileged instructions execution (we have converted rdtsc in priv ins with cr4)
 $$in this moment we check if it is rdtsc, and in this case, we jump over the instruction and we set eax=0 edx=0
-sxe -c ".if((poi(eip)&0x0000ffff)==0x310f){.printf \"rdtsc\r\n\";r ip = ip+2;r eax=@$t9;r edx=0;r $t9=@$t9+1; gh;}" c0000096
+sxe -c ".if((poi(eip)&0x0000ffff)==0x310f){.printf \"rdtsc\r\n\";r eip = eip+2;r eax=@$t9;r edx=0;r $t9=@$t9+1; gh;}" c0000096
