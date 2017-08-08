@@ -1,1 +1,1 @@
-Useful Windbg Scripts for helping in reverse engeenering.
+Useful Scripts for helping in reverse engeenering.
