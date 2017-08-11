@@ -1,0 +1,131 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<show_address_info.wdbg <address> <process>
+$$
+
+aS stage @$t19
+aS basealloc @$t18
+aS stop @$t17
+aS baseSearch @$t16
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+    .process /i ${$arg2}
+    g
+    .reload
+}
+
+.block
+{
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$print info related to the address
+    
+    .printf /D "<b>\nAddress info for address %x</b>\n", ${$arg1}
+    .printf /D "<b>--------------------------------------------</b>\n"
+    
+    !address ${$arg1}
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$print info related to the heap (if the address belongs to a heap)
+    
+    .printf /D "<b>\nHeap related info to address %x</b>\n", ${$arg1}
+    .printf /D "<b>--------------------------------------------</b>\n"
+    
+    !heap -p -a ${$arg1}
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$search for references to the arg1 address
+    
+    .printf /D "<b>\nReferences to address %x</b>\n", ${$arg1}
+    .printf /D "<b>--------------------------------------------</b>\n"
+    
+    r ${stop} = 0
+    r ${baseSearch} = 0
+    
+    .while(${stop} == 0)
+    {
+        $$.printf "searching %x\n", ${baseSearch}
+        
+        r @$t0 = ${baseSearch}
+        r @$t1 = ${$arg1}
+        
+        s @$t0 L 10000000 (@$t1 & ff) ((@$t1 & ff00) >> 8) ((@$t1 & ff0000) >> 10) ((@$t1 & ff000000) >> 18)
+        
+        .if(${baseSearch} >= 0x70000000)
+        {
+            r ${stop} = 1
+        }
+        
+        r ${baseSearch} = ${baseSearch} + 10000000
+    }
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$ use !heap extension to guess the base of the allocated memory related to the arg1 address
+    
+    r stage = 0
+    r basealloc = -1
+    
+    .foreach ( tok {!heap -p -a ${$arg1}} )
+    {
+        .if(${stage} == 2)
+        {
+            r basealloc = ${tok}
+            .break
+        }
+        
+        .if(${stage} == 1)
+        {
+            .if($scmp("${tok}0","state0")==0)
+            {
+                r stage = 2
+            }        
+        }
+    
+        .if(${stage} == 0)
+        {
+            .if($scmp("${tok}0","HEAP_ENTRY0")==0)
+            {   
+                r stage = 1
+            }
+        }
+    }
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$search for references to the allocated memory base
+    
+    .if(${basealloc} != -1)
+    {
+        .printf /D "<b>\nReferences to allocation base %x</b>\n", ${basealloc}+8
+        .printf /D "<b>--------------------------------------------</b>\n"
+            
+        r ${stop} = 0
+        r ${baseSearch} = 0
+        
+        .while(${stop} == 0)
+        {
+            $$.printf "searching %x\n", ${baseSearch}
+            
+            r @$t0 = ${baseSearch}
+            r @$t1 = ${basealloc}+8
+            
+            s @$t0 L 10000000 (@$t1 & ff) ((@$t1 & ff00) >> 8) ((@$t1 & ff0000) >> 10) ((@$t1 & ff000000) >> 18)
+            
+            .if(${baseSearch} >= 70000000)
+            {
+                r ${stop} = 1
+            }
+            
+            r ${baseSearch} = ${baseSearch} + 10000000            
+        }
+    }
+
+    ad stage
+    ad basealloc
+    ad stop
+    ad baseSearch
+}

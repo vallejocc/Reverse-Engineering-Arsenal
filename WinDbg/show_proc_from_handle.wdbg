@@ -1,0 +1,43 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<show_proc_from_handle.wdbg <handle>
+$$
+
+$$.sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+$$.reload
+
+
+r @$t0 = ${$arg1}
+
+.if(@$t0!=0 & @$t0!=0xffffffff)
+{
+    r @$t1 = 0;
+    .foreach (tok { !handle @$t0 })
+    {
+        .if(@$t1==1)
+        {
+            r @$t1 = 0;
+            .printf /D "<b>${tok} "
+            .foreach (tok2 { !process ${tok} 0 })
+            {
+                .if(@$t1==1)
+                {
+                    .printf /D "${tok2}\n</b>"
+                    .break;
+                }
+                .elsif($scmp("${tok2}","Image:")==0)
+                {
+                    r @$t1 = 1;
+                }            
+            }            
+            .break;                
+        }
+        .elsif($scmp("${tok}","Object:")==0)
+        {
+            r @$t1 = 1;
+        };
+    };
+};

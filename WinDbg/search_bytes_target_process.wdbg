@@ -1,0 +1,56 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<search_string_target_process.wdbg <proc> <byte1> <byte2> .. <byteN>
+$$
+$$ This script is useful for search a max of 16 given bytes in the given process
+$$     
+
+aS baseSearch @$t17
+aS stop @$t16
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    .process /i ${$arg1}
+    g
+    
+    .block
+    {
+        .reload
+    }
+    
+    .block
+    {
+        .reload /user
+    }
+    
+    r ${stop} = 0
+    r ${baseSearch} = 0
+    
+    .while(${stop} == 0)
+    {
+        .printf "searching base %x\n", ${baseSearch}
+        
+        r @$t0 = ${baseSearch}
+        
+        s @$t0 L?0x10000000 ${$arg2} ${$arg3} ${$arg4} ${$arg5} ${$arg6} ${$arg7} ${$arg8} ${$arg9} ${$arg10} ${$arg11} ${$arg12} ${$arg13} ${$arg14} ${$arg15} ${$arg16} ${$arg17}
+        
+        .if(${baseSearch} >= 0x70000000)
+        {
+            r ${stop} = 1
+        }
+        
+        r ${baseSearch} = ${baseSearch} + 0x10000000            
+    }
+
+    ad baseSearch
+    ad stop
+}

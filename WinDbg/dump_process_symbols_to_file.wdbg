@@ -1,0 +1,37 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$
+$$ $$>a<dump_process_symbols_to_file.wdbg <path> <proc>
+$$
+$$ This simple script will dump to a file all the symbols of the given process.
+$$ If you dump a PE from memory, it could have variables pointing to symbols (for example, api addresses that it got with GetProcAddress, etc...).
+$$ It is useful to have a list of pairs (symbol, address) because in this way if we open the dumped PE with IDA we can search for that addresses
+$$ and set a name for the variable containing them.
+$$
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    .process /i ${$arg2}
+    g
+    
+    .block
+    {
+        .reload
+    }
+    
+    .block
+    {
+        .reload /user
+    }
+       
+    .block { .shell -i- -ci "x *!*" findstr "!">${$arg1} }
+}

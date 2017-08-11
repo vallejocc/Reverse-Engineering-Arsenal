@@ -1,0 +1,31 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$
+$$     $$>a<pagein_range.wdbg <start_address> <end_address> <process>
+$$
+$$ Page into memory a range of memory of the given process
+$$
+
+r $t0 = ${$arg1};
+
+.while (@$t0 < ${$arg2})
+{
+    .if($vvalid(@$t0, 1)==0)
+    {
+        .printf "paging in: %x\n", @$t0
+        .pagein /p ${$arg3} @$t0
+        g
+        .if($vvalid(@$t0, 1)==0)
+        {
+            .printf "!!!failed to page in: %x\n", @$t0
+        }    
+    }
+    .else
+    {
+        .printf "already paged in: %x\n", @$t0
+    }
+    r $t0 = @$t0 + 0x1000;
+};

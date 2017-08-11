@@ -12,6 +12,10 @@ $$      $$>a<change_process_name.wdbg vmtoolsd.exe   ->  it will rename the proc
 $$
 $$  The script increase +1 the last letter of the name. If you need other or additional modifications, it is easy to modify the script
 
+.logopen ${$arg2}\change_process_name.start
+.printf "start"
+.logclose
+
 aS stage @$t19
 
 .block
@@ -62,3 +66,7 @@ aS stage @$t19
         }
     }
 }
+
+.logopen ${$arg2}\change_process_name.end
+.printf "end"
+.logclose

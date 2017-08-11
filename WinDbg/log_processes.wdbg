@@ -1,0 +1,24 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$  $$>a<log_processes.wdbg <destination directory>
+
+.logopen ${$arg1}\log_processes.start
+.logclose
+
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.logopen ${$arg1}\processes_wdbglog.txt
+!process 0 0
+.logclose
+
+.logopen ${$arg1}\log_processes.end
+.logclose
