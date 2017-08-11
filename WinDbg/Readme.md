@@ -23,7 +23,7 @@ change_object_name.wdbg \\global??\\hgfs  (in this case we rename the symbolicli
 change_object_name.wdbg \\devices\\vmci   (in this case we rename the deviceobject)   \\devices\\vmci -> \\devices\\amci                    
                                                                                                                                                     
 The script changes the first letter of the name (setting 'a'). 
-If you need other letter or additional modifications, it is easy to modify the script
+If you need other letter or additional modifications, it is easy to modify the script.
 
 $$>a<change_process_name.wdbg <main module of the process to be renamed>
 ------------------------------------------------------------------------
@@ -33,7 +33,7 @@ i.e. if we want to rename vmtoolsd.exe:
 $$>a<change_process_name.wdbg vmtoolsd.exe   ->  it will rename the process to vmtoolse
 
 The script increase +1 the last letter of the name. If you need other or additional modifications, 
-it is easy to modify the script
+it is easy to modify the script.
   
 $$>a<dump_process_symbols_to_file.wdbg <path> <proc>                                                                                                 
 ----------------------------------------------------  
@@ -63,22 +63,22 @@ Page into memory a range of memory of the given process.
 $$>a<search_bytes_all_processes.wdbg <byte1> <byte2> ... <byteN>       (max 16 bytes)
 -------------------------------------------------------------------------------------
 
-This script is useful for search a max of 16 given bytes through all the running processes
+This script is useful for search a max of 16 given bytes through all the running processes.
 
 $$>a<search_string_target_process.wdbg <proc> <byte1> <byte2> .. <byteN>
 ------------------------------------------------------------------------
 
-This script is useful for search a max of 16 given bytes in the given process
+This script is useful for search a max of 16 given bytes in the given process.
 
 $$>a<search_string_all_processes.wdbg <string>
 ----------------------------------------------
 
-This script is useful for search a given string through all the running processes
+This script is useful for search a given string through all the running processes.
   
 $$>a<search_string_target_process.wdbg <proc> <string> 
 -----------------------------------------------------
 
-This script is useful for search a given string in a given process
+This script is useful for search a given string in a given process.
 
 $$>a<secure_writemem.wdbg <start> <end> <process> <targetdir> <ext>
 -------------------------------------------------------------------
@@ -86,21 +86,21 @@ $$>a<secure_writemem.wdbg <start> <end> <process> <targetdir> <ext>
 this script tries to dump a range of memory. 
 If its not possible to dump a part of the range, that part if filled with random data
 (really its filled with "\x11\x11\x11......\x11\x20\x0d\x0a" (total length 0x1000 for each page filled), 
-but we must not assume it will always contain this value 
+but we must not assume it will always contain this value.
 
 $$>a<show_address_info.wdbg <address> <process>
 -----------------------------------------------
 
-Show info about a given address of a given process
+Show info about a given address of a given process.
 
 $$>a<show_proc_from_handle.wdbg <handle>
 ----------------------------------------
 
-Show a process info from a given handle
+Show a process info from a given handle.
 
 $$>a<symbols.wdbg
 -----------------
 
-Load symbols
+Load symbols.
 
 
