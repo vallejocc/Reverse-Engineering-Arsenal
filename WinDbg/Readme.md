@@ -2,38 +2,38 @@
 $$>a<anti_antidebug_rdtsc.wdbg
 ------------------------------
 
-  This script works in similar way than anti-rdtsc tools that install a driver.
+This script works in similar way than anti-rdtsc tools that install a driver.
   
-  The script enables flag 2 of cr4: TSD Time Stamp Disable. In this way rdtsc is a privileged instruction. 
-  After that, it enables the option  for stopping when user mode exception (gflag +sue +soe, gflags 0x20000001).
-  Then we enable 0xc0000096 -> privileged instruction.    
-  In this way, when rdtsc is executed by an application, an exception will occur and windbg will catch the exception.
-  In that moment, the script checks the ins code of rdtsc, 0x310f. If it is a rdtsc instruction, it skips 
-  the instruction ip = ip+2.
-  Finally it sets edx = 0, and eax = last_counter+1.
-  Applications execution rdtsc will see an increment of 1 each rdtsc execution.
+The script enables flag 2 of cr4: TSD Time Stamp Disable. In this way rdtsc is a privileged instruction. 
+After that, it enables the option  for stopping when user mode exception (gflag +sue +soe, gflags 0x20000001).
+Then we enable 0xc0000096 -> privileged instruction.    
+In this way, when rdtsc is executed by an application, an exception will occur and windbg will catch the exception.
+In that moment, the script checks the ins code of rdtsc, 0x310f. If it is a rdtsc instruction, it skips 
+the instruction ip = ip+2.
+Finally it sets edx = 0, and eax = last_counter+1.
+Applications execution rdtsc will see an increment of 1 each rdtsc execution.
 
 $$>a<change_object_name.wdbg <full object path + name>                                                                                              
 ------------------------------------------------------
 
-    i.e. pafish tries to open vmware devices "\\\\.\\HGFS" and "\\\\.\\vmci", 
-    if can use this script to rename these devices in this way:           
+i.e. pafish tries to open vmware devices "\\\\.\\HGFS" and "\\\\.\\vmci", 
+if can use this script to rename these devices in this way:           
+                                                                                                                                                   
+change_object_name.wdbg \\global??\\hgfs  (in this case we rename the symboliclink)   \\global??\\hgfs -> \\global??\\agfs                  
+change_object_name.wdbg \\devices\\vmci   (in this case we rename the deviceobject)   \\devices\\vmci -> \\devices\\amci                    
                                                                                                                                                     
-    change_object_name.wdbg \\global??\\hgfs  (in this case we rename the symboliclink)   \\global??\\hgfs -> \\global??\\agfs                  
-    change_object_name.wdbg \\devices\\vmci   (in this case we rename the deviceobject)   \\devices\\vmci -> \\devices\\amci                    
-                                                                                                                                                    
-    The script changes the first letter of the name (setting 'a'). 
-    If you need other letter or additional modifications, it is easy to modify the script
+The script changes the first letter of the name (setting 'a'). 
+If you need other letter or additional modifications, it is easy to modify the script
 
 $$>a<change_process_name.wdbg <main module of the process to be renamed>
 ------------------------------------------------------------------------
 
-  i.e. if we want to rename vmtoolsd.exe:
+i.e. if we want to rename vmtoolsd.exe:
 
-      $$>a<change_process_name.wdbg vmtoolsd.exe   ->  it will rename the process to vmtoolse
+$$>a<change_process_name.wdbg vmtoolsd.exe   ->  it will rename the process to vmtoolse
 
-  The script increase +1 the last letter of the name. If you need other or additional modifications, 
-  it is easy to modify the script
+The script increase +1 the last letter of the name. If you need other or additional modifications, 
+it is easy to modify the script
   
 $$>a<dump_process_symbols_to_file.wdbg <path> <proc>                                                                                                 
 ----------------------------------------------------  
