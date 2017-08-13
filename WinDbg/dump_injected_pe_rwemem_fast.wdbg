@@ -1,0 +1,385 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$     $$>a<dump_injected_pe_rwemem_fast.wdbg  <destination directory>
+$$
+$$ This windbg script will walk the results of !address command for each process in the debuggee machine, 
+$$ searching for RWE memory containing PE files (based on the analysis of PE header). 
+$$ 
+$$ When a PE file in RWE memory is found, the script will dump it. In addition to dump it, it will fix 
+$$ some fields of PE header: imagebase will be set to the address where the PE is loaded, and 
+$$ section[i].PointerToRawData = section[i].VirtualAddress (because we are dumping a mapped PE to disk and,
+$$ if we want to analyze the dumped PE with a disassembler for example, we need to fix the sections).
+$$
+$$ The difference with the script dump_injected_pe_rwemem.wdbg (the non fast version) it is this script is
+$$ not paging-in each page before trying to dump a PE file. Usually pages will be there, but it could fail
+$$ to dump the entire file if a page is not mapped.
+$$ 
+$$ Anyway, for debugging, i recommend to disable swapping, for having pages always in memory.
+$$
+
+$$.sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+$$.reload
+
+.logopen ${$arg1}\dump_injected_pe_rwemem_fast.start
+.printf "start"
+.logclose
+
+aS stage @$t19
+aS temp @$t18
+aS temp2 @$t17
+aS temp3 @$t16
+aS isPossiblePE @$t15
+aS isDosMessageBased @$t14
+aS pe @$t13
+aS fileheader @$t12
+aS optionalheader @$t11
+aS sections @$t10
+aS nsections @$t9
+aS lastsect @$t8
+aS prev1 @$t7
+aS prev2 @$t6
+aS baseaddr @$t5
+aS baseaddrlen @$t4
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    r stage = 2
+    
+    .printf "xxxx"
+    
+    .foreach (processes_tok { !process 0 0 })
+    {
+        .if($scmp("${processes_tok}","PROCESS")==0)
+        {
+            .if(${stage}==2)
+            {
+                $$stage==2 is used to skip the first apparition of PROCESS string in the results of !process 0 0
+                r stage = 0
+            }
+            .else
+            {            
+                r stage = 1
+            }
+        }
+        .elsif(${stage}==1)
+        {
+            .printf /D "<b>Analyzing process ${processes_tok}</b>\n"
+            
+            r stage = 0
+        
+            .process /p /r ${processes_tok}
+            
+            $$search for memory blocks with ReadWriteExecute protection
+            
+            $$careful:
+            $$ when the baseaddress is over 0x10000000 findstr tokens will be:
+            $$ 93:7640:20010000
+            $$ 2002c000
+            $$ 1c000
+            $$ UserRange
+            $$ ...
+            $$ however if the addess is under 0x10000000:
+            $$ 25:1364:
+            $$ 60000
+            $$ 61000
+            $$ 1000
+            $$ UserRange
+            $$ The reason for this its windbg puts spaces before the base address when it hasnt 8 characters to complete 8 characters, but if the address is
+            $$ ???????? then it doesnt put spaces. We need to have in mind both case, and this is the reason of the stages of the next code
+            $$
+            
+            .foreach (tok { .shell -ci "!address" findstr /N /O /A:fc "UserRange.*ReadWriteExecute" }) 
+            {
+                r isPossiblePE = 0
+                r isDosMessageBased = 0
+                
+                .printf "${tok}\n"
+                
+                .if($spat("${tok}","*:*:*")!=0)
+                {
+                    r stage = 1
+                }
+                .elsif(${stage}==1)
+                {
+                    r prev1 = ${tok}                
+                    r stage = 2
+                }
+                .elsif(${stage}==2)
+                {
+                    r prev2 = ${tok}                
+                    r stage = 3
+                }
+                .elsif(${stage}==3)
+                {
+                    .if($spat("${tok}","*UserRange*")!=0)
+                    {
+                        r baseaddr = prev1 - prev2
+                        r baseaddrlen = prev2
+                        r stage = 5
+                    }
+                    .else
+                    {
+                        r baseaddr = prev1
+                        r baseaddrlen = ${tok}
+                        r stage = 4
+                    }
+                }
+                .elsif(${stage}==4)
+                {
+                    r stage = 5
+                }
+                .elsif(${stage}==5)
+                {
+                    $$for each block with ReadWriteExecute protection, check MZ / PE
+                    
+                    r @$t0 = baseaddr
+                    
+                    .if(@$t0!=0)
+                    {
+                        .printf "base %x\n", @$t0
+                        
+                        $$.pagein /p ${processes_tok} @$t0
+                        $$g
+                        
+                        $$!address @$t0
+                                
+                        .if($vvalid(@$t0, 2)==1)
+                        {
+                            .printf "valid base address\n"
+                            
+                            .printf "PE_header %x\n", @$t0+@@c++(((nt!_IMAGE_DOS_HEADER * )@$t0)->e_lfanew)
+                                        
+                            .if($vvalid(@$t0+@@c++(((nt!_IMAGE_DOS_HEADER * )@$t0)->e_lfanew), 2)==1)
+                            {
+                                .printf "valid PE_header address\n"
+                                
+                                .if(wo(@$t0)==0x5a4d & dwo(@$t0+@@c++(((nt!_IMAGE_DOS_HEADER * )@$t0)->e_lfanew))==0x454E)
+                                {
+                                    $$We can find MZ / NE  images, we ignore them
+                                }
+                                .elsif(wo(@$t0)==0x5a4d & dwo(@$t0+@@c++(((nt!_IMAGE_DOS_HEADER * )@$t0)->e_lfanew))==0x4550)
+                                {
+                                    $$if MZ and PE signatures, valid pe header
+                                    .printf "valid PE_header\n"
+                                    r isPossiblePE = 1
+                                }
+                                .else
+                                {
+                                    $$if not MZ or not PE signature, but msdos message is found, its a possible pe header
+                                    r temp = 0
+                                    .foreach (tok2 { s -a @$t0 L 0x80 "This program cannot " })
+                                    {
+                                        r temp = 1
+                                    }
+                                    .if(${temp}==1)
+                                    {
+                                        .printf "possible pe header\n"
+                                        r isPossiblePE = 1
+                                        r isDosMessageBased = 1
+                                    }
+                                }
+                            }
+                            .else
+                            {
+                                .printf "not valid PE_header address\n"
+                            }
+                        }
+                        .else
+                        {
+                            .printf "not valid base address\n"
+                        }
+                        
+                        $$if we have found a possible PE in a memory zone with ReadWriteExecute protection, we will check if the base address is in the list of loaded module
+                        .if(${isPossiblePE}==1)
+                        {
+                            .printf "is possible module %x\n", @$t0
+
+                            $$  r temp = 0
+                            $$  $$search for valid from "is not valid address"
+                            $$  .foreach (tok3 { .shell -ci "!lmi @$t0" findstr /N /O "valid.address" })
+                            $$  {
+                            $$      r temp = ${temp} + 1
+                            $$  }
+                            $$  .printf "%x\n", ${temp}
+                            $$  
+                            $$  We are going to disable !lmi check. I have found malware that is unmapping
+                            $$  the main module of a executable when it does process hollowing, and it loads
+                            $$  its injected PE in that address. In this cases, !lmi is not answering not valid
+                            $$  address for that address. However !address command is containing the path
+                            $$  of the module (for example Section [\Windows\explorer.exe]) when the module is
+                            $$  a valid loaded module, and it wont contain the path when it is an injected module
+                            $$  in RWE mem. So, we will skip !lmi check, and we will check !address results
+                            $$ vvvvvvvv DISABLE !LMI CHECK vvvvvvvvv
+                            r temp = 4
+                            $$ ^^^^^^^^ DISABLE !LMI CHECK ^^^^^^^^^
+                            
+                            $$ "is not valid address" was found
+                            .if(${temp} > 3) 
+                            {
+                                $$ there are some modules that !lmi command is answering: is not valid address, however they seems to be valid loaded modules (not interesing for us). 
+                                $$ However if we consults information about the address with !address we find things as:  
+                                $$ Memory Usage:           Section [\WINDOWS\System32\blablabla.mui] (it happens usually with .mui files, but not only with them
+                                $$ We will discard results of !address with .dll], .mui] and .exe]                        
+    
+                                r temp = 0                            
+                                .foreach (tok4 { .shell -ci "!address @$t0" findstr /N /O /R /I "\.mui\]" })
+                                {
+                                    r temp = ${temp} + 1
+                                }
+    
+                                r temp2 = 0
+                                .foreach (tok5 { .shell -ci "!address @$t0" findstr /N /O /R /I "\.dll\]" })
+                                {
+                                    r temp2 = ${temp2} + 1
+                                }
+    
+                                r temp3 = 0
+                                .foreach (tok6 { .shell -ci "!address @$t0" findstr /N /O /R /I "\.exe\]" })
+                                {
+                                    r temp3 = ${temp3} + 1
+                                }
+    
+                                .printf "search !address .mui %x\n", ${temp}
+                                .printf "search !address .dll %x\n", ${temp2}
+                                .printf "search !address .exe %x\n", ${temp3}
+    
+                                .if(${temp} < 4 and ${temp2} < 4 and ${temp3} < 4)
+                                {
+                                    .if(${isDosMessageBased}==0)
+                                    {
+                                        .printf /D "<b>---------------------------------------------------------------------------</b>\n"
+                                        .printf /D "<b>Process: ${processes_tok} base: %x -> Possible injected or unpacked PE</b>\n", @$t0
+                                        .printf /D "<b>---------------------------------------------------------------------------</b>\n"
+                                    }
+                                    .else
+                                    {
+                                        .printf /D "-------------------------------------------------------------------------------------------------------------------------------------\n"
+                                        .printf /D "Process: ${processes_tok} base: %x -> Possible injected or unpacked PE, based on the dos header message: This program cannot...\n", @$t0
+                                        .printf /D "--------------------------------------------------------------------------------------------------------------------------------------\n"                                    
+                                    }
+                                    
+                                    .printf "xxxx1\n"
+                                                                        
+                                    r pe = @$t0 + poi(@$t0 + @@(#FIELD_OFFSET(nt!_IMAGE_DOS_HEADER, e_lfanew)))
+                                    
+                                    .printf "xxxx2 %x\n", ${pe}
+                                    
+                                    r fileheader = ${pe} + @@(#FIELD_OFFSET(nt!_IMAGE_NT_HEADERS, FileHeader))
+                                    
+                                    .printf "xxxx3 %x\n", ${fileheader}
+                                    
+                                    r optionalheader = ${pe} + @@(#FIELD_OFFSET(nt!_IMAGE_NT_HEADERS, OptionalHeader))
+                                    
+                                    .printf "xxxx4 %x\n", ${optionalheader}
+                                    
+                                    r nsections = poi(${fileheader} + @@(#FIELD_OFFSET(nt!_IMAGE_FILE_HEADER, NumberOfSections )))&0xffff
+                                    
+                                    .printf "xxxx5 %x\n", ${nsections}
+                                    
+                                    r sections = ${pe} + @@c++(sizeof(nt!_IMAGE_NT_HEADERS))
+                                    
+                                    .printf "xxxx6 %x\n", ${sections}
+                                    
+                                    $$ reach the end of the PE file (last section rva + last section vsize)                            
+                                    r lastsect = ${sections} + ( ${nsections} - 1 ) * @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+                                    r @$t1 = @$t0 + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) ${lastsect} )->VirtualAddress ) + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) ${lastsect} )->Misc.VirtualSize )
+                                    r @$t2 = @$t0 + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) ${lastsect} )->VirtualAddress ) + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) ${lastsect} )->SizeOfRawData )
+                                    r @$t3 = @$t0
+                                    .if (@$t2 > @$t1) { r @$t1 = @$t2 } 
+                                    
+                                    $$limit to dump = 0x100000 bytes
+                                    .if (@$t1-@$t0 > 0x100000) 
+                                    {
+                                        r @$t1 = @$t0+0x100000
+                                    }
+                                    
+                                    .printf "xxxx7"
+                                    
+                                    $$ before dumping the PE, we are going to modify sections' raw offset = virtual address for coherency in the dumped PE when we analyze it with IDA or any other tool                                    
+                                    r $t2 = ${sections}
+                                    r lastsect = ${sections} + ( ${nsections} ) * @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+                                    
+                                    .while (@$t2 < ${lastsect})
+                                    {
+                                        ed (@$t2+@@( #FIELD_OFFSET(nt!_IMAGE_SECTION_HEADER, PointerToRawData))) @@c++((( nt!_IMAGE_SECTION_HEADER *)@$t2)->VirtualAddress)
+                                        .if( @@c++((( nt!_IMAGE_SECTION_HEADER *)@$t2)->SizeOfRawData) < @@c++((( nt!_IMAGE_SECTION_HEADER *)@$t2)->Misc.VirtualSize))
+                                        {
+                                            ed (@$t2+@@( #FIELD_OFFSET(nt!_IMAGE_SECTION_HEADER, SizeOfRawData))) @@c++((( nt!_IMAGE_SECTION_HEADER *)@$t2)->Misc.VirtualSize)
+                                        }
+                                        .else
+                                        {
+                                            ed (@$t2+@@( #FIELD_OFFSET(nt!_IMAGE_SECTION_HEADER, Misc))) @@c++((( nt!_IMAGE_SECTION_HEADER *)@$t2)->SizeOfRawData)
+                                        }
+                                        r $t2 = @$t2 + @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+                                    }
+                                    
+                                    $$update sizeofimage                                    
+                                    .block
+                                    {
+                                        ed (${optionalheader} + @@(#FIELD_OFFSET(nt!_IMAGE_OPTIONAL_HEADER, SizeOfImage))) (@$t1-@$t0)&0x7fffffff
+                                    }
+                                    
+                                    .printf "xxxx8"
+                                    
+                                    $$update imagebase
+                                    .block
+                                    {
+                                        ed (${optionalheader} + @@(#FIELD_OFFSET(nt!_IMAGE_OPTIONAL_HEADER, ImageBase))) ${baseaddr}
+                                    }
+                                    
+                                    .printf "xxxx9"
+                                    
+                                    .printf "dumping file address start %x end %x", @$t0, @$t1
+                                    
+                                    .foreach /pS 4 (baseaddr_tok { ? baseaddr })
+                                    {
+                                        .foreach /pS 4 (baseaddrlen_tok { ? baseaddrlen })
+                                        {
+                                            .printf "${processes_tok}_${baseaddr_tok}_${baseaddrlen_tok}.pedmp"
+                                            .writemem ${$arg1}\${processes_tok}_${baseaddr_tok}_${baseaddrlen_tok}.pedmp @$t3 L (@$t1 - @$t3)
+                                        }
+                                    }
+                                }
+                            }           
+                        }
+                        
+                        r stage = 0
+                    }
+                }
+            }
+        
+            r stage = 0
+        }
+    }
+ 
+    .logopen ${$arg1}\dump_injected_pe_rwemem_fast.end
+    .printf "end"
+    .logclose
+    
+    ad stage
+    ad temp
+    ad temp2
+    ad temp3
+    ad isPossiblePE
+    ad isDosMessageBased
+    ad pe
+    ad fileheader
+    ad optionalheader
+    ad sections
+    ad nsections
+    ad lastsect
+    ad prev1
+    ad prev2
+    ad baseaddr
+    ad baseaddrlen
+}
