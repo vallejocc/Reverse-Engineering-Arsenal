@@ -1,4 +1,15 @@
 
+$>a<dump_injected_pe_rwemem.wdbg <destination directory>
+--------------------------------------------------------
+
+This windbg script will walk the results of !address command for each process in the debuggee machine, 
+searching for RWE memory containing PE files (based on the analysis of PE header). 
+ 
+When a PE file in RWE memory is found, the script will dump it. In addition to dump it, it will fix 
+some fields of PE header: imagebase will be set to the address where the PE is loaded, and 
+section[i].PointerToRawData = section[i].VirtualAddress (because we are dumping a mapped PE to disk and,
+if we want to analyze the dumped PE with a disassembler for example, we need to fix the sections).
+
 $$>a<anti_antidebug_rdtsc.wdbg
 ------------------------------
 
