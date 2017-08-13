@@ -1,5 +1,5 @@
 
-$>a<dump_injected_pe_rwemem.wdbg <destination directory>
+$$>a<dump_injected_pe_rwemem.wdbg <destination directory>
 --------------------------------------------------------
 
 This windbg script will walk the results of !address command for each process in the debuggee machine, 
