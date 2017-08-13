@@ -10,6 +10,8 @@ some fields of PE header: imagebase will be set to the address where the PE is l
 section[i].PointerToRawData = section[i].VirtualAddress (because we are dumping a mapped PE to disk and,
 if we want to analyze the dumped PE with a disassembler for example, we need to fix the sections).
 
+Article talking about this script: https://vallejo.cc/2017/08/13/tools-for-unpacking-malware-part-1-dumping-executables-from-rwe-memory/
+
 $$>a<dump_injected_pe_rwemem_fast.wdbg  <destination directory>
 ---------------------------------------------------------------
 
@@ -27,11 +29,15 @@ to dump the entire file if a page is not mapped.
 
 Anyway, for debugging, i recommend to disable swapping, for having pages always in memory.
 
+Article talking about this script: https://vallejo.cc/2017/08/13/tools-for-unpacking-malware-part-1-dumping-executables-from-rwe-memory/
+
 $$>a<find_injected_pe_rwemem.wdbg
 ---------------------------------
 
 This windbg script will walk the results of !address command for each process in the debuggee machine, 
 searching for RWE memory containing PE files (based on the analysis of PE header). 
+
+Article talking about this script: https://vallejo.cc/2017/08/13/tools-for-unpacking-malware-part-1-dumping-executables-from-rwe-memory/
 
 $$>a<anti_antidebug_rdtsc.wdbg
 ------------------------------
@@ -76,7 +82,9 @@ This simple script will dump to a file all the symbols of the given process.
 If you dump a PE from memory, it could have variables pointing to symbols (for example, api 
 addresses that it got with GetProcAddress, etc...).      
 It is useful to have a list of pairs (symbol, address) because in this way if we open the 
-dumped PE with IDA we can search for that addresses and set a name for the variable containing them.                                                                                                     
+dumped PE with IDA we can search for that addresses and set a name for the variable containing them.
+
+Article talking about this script: https://vallejo.cc/2017/08/13/tools-for-unpacking-malware-part-1-dumping-executables-from-rwe-memory/
 
 $$>a<load_code_to_kernel_memory.wdbg <src code> <mem size> <offset start routine>
 ---------------------------------------------------------------------------------
