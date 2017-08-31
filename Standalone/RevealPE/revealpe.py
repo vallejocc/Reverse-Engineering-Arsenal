@@ -25,10 +25,10 @@ def joinlist(a, b):
 def recurfiles(p):
     l=[]
     for e in os.listdir(p):
-        if os.path.isdir(p+"\\"+e):
-            l=joinlist(l,recurfiles(p+"\\"+e))            
+        if os.path.isdir(p+"/"+e):
+            l=joinlist(l,recurfiles(p+"/"+e))
         else:
-            l.append(p+"\\"+e)
+            l.append(p+"/"+e)
     return l
 
 ####################################################################
@@ -92,10 +92,10 @@ def doWorkPESearch(target):
     unalignedplaintxts = []
     
     owndir = os.path.dirname(os.path.abspath(__file__))
-    f = open("%s\\peplain.txt" % owndir, "rb")
+    f = open("%s/peplain.txt" % owndir, "rb")
     plaintxts = map(str.strip, f.readlines())
     f.close()
-    f = open("%s\\unalignedpeplain.txt" % owndir, "rb")
+    f = open("%s/unalignedpeplain.txt" % owndir, "rb")
     unalignedplaintxts = map(str.strip, f.readlines())
     f.close()
 

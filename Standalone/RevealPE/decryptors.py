@@ -161,10 +161,10 @@ def joinlist(a, b):
 def recurfiles(p):
     l=[]
     for e in os.listdir(p):
-        if os.path.isdir(p+"\\"+e):
-            l=joinlist(l,recurfiles(p+"\\"+e))            
+        if os.path.isdir(p+"/"+e):
+            l=joinlist(l,recurfiles(p+"/"+e))
         else:
-            l.append(p+"\\"+e)
+            l.append(p+"/"+e)
     return l
 
 ####################################################################
