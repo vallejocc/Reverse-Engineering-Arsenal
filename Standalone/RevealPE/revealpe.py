@@ -205,13 +205,14 @@ def doWorkRawSearch(target, plaintxt):
     pendingAlignments = 1
     if gcheckunaligned: pendingAlignments = 4
         
-    if os.path.exists(target) and os.path.isfile(target):
-        bfile = True
-        f = open(target, "rb")
-        content = f.read()
-        f.close()
-    else:
-        content = target
+    content = target
+    try:
+        if os.path.exists(target) and os.path.isfile(target):        
+            bfile = True
+            f = open(target, "rb")
+            content = f.read()
+            f.close()
+    except:pass        
         
     deccontent = None
     alg = None
