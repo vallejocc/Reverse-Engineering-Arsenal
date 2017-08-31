@@ -80,13 +80,14 @@ def doWorkPESearch(target):
     bfile = False
     pe = None
     
-    if os.path.exists(target) and os.path.isfile(target):
-        bfile = True
-        f = open(target, "rb")
-        content = f.read()
-        f.close()
-    else:
-        content = target
+    content = target
+    try:
+        if os.path.exists(target) and os.path.isfile(target):        
+            bfile = True
+            f = open(target, "rb")
+            content = f.read()
+            f.close()
+    except:pass        
         
     plaintxts = []        
     unalignedplaintxts = []
