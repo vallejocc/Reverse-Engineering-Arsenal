@@ -9,8 +9,8 @@
 ## Some malware families construct strings into the stack, like this:
 ## 
 ##             mov     dword ptr [ebp-18h], 61737376h ; vssa
-## mov     dword ptr [ebp-14h], 642E6970h ; pi.d
-## mov     word ptr [ebp-10h], 6C6Ch; ll
+##             mov     dword ptr [ebp-14h], 642E6970h ; pi.d
+##             mov     word ptr [ebp-10h], 6C6Ch; ll
 ## 
 ## In addition, i have found malware families permutating code (they split the code in portions and the mix these portions, 
 ## adding jumps from a portion to the next one for getting the code being executed in the correct order), and constructing
