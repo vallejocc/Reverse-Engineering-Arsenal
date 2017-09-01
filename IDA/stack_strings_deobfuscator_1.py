@@ -41,6 +41,18 @@
 ## 
 ##    "Function text constructed in stack: sub_474CA0 |     vssapi.dllCreateVssBackupComponentsInternaVssFreeSnapshotPropertiesInternaupComponents@@@Zonents@@YGJPAPAVIVssBackreeSnapshotPropertiessBackupCompateVVssF?Cre"
 ##
+## Other malware constructs strings on the stack by moving each byte to the stack, like this:
+##
+##    mov     [ebp+var_30], 48h
+##    mov     [ebp+var_2F], 65h
+##    mov     [ebp+var_2E], 6Ch
+##    mov     [ebp+var_2D], 6Ch
+##    mov     [ebp+var_2C], 6Fh
+##
+## For this cases i recommend to you to read this article (with ida script included):
+##
+##    https://www.fireeye.com/blog/threat-research/2014/08/flare-ida-pro-script-series-automatic-recovery-of-constructed-strings-in-malware.html
+##
 ################################################
 
 import idaapi
@@ -86,12 +98,12 @@ for segea in Segments():
         for block in lorderedblocks:
             for head in Heads(block.startEA, block.endEA):     
                 dism = GetDisasm(head)
-                if "mov     [ebp" in dism or "mov     dword ptr [ebp" in dism or "mov     word ptr [ebp" in dism:
+                if "mov     dword ptr [ebp" in dism or "mov     word ptr [ebp" in dism:
                     op1 = GetOpType(head, 1)
                     if op1==5 or op1==6 or op1==7:                        
                         v = GetOperandValue(head, 1)
                         curtxt = None
-                        if ("mov     [ebp" in dism or "mov     dword ptr [ebp" in dism) and v>0xffffff:
+                        if ("mov     dword ptr [ebp" in dism) and v>0xffffff:
                             curtxt = chr(v&0xff) + chr((v&0xff00)>>8) + chr((v&0xff0000)>>16) + chr((v&0xff000000)>>24)
                         if ("mov     word ptr [ebp" in dism) and v>0xff:
                             curtxt = chr(v&0xff) + chr((v&0xff00)>>8)
