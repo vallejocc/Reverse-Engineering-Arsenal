@@ -50,6 +50,7 @@ def binarySearch(alist, item):
 
 symbols = []
 
+imagebase = idaapi.get_imagebase()
 ea = here()
 symbols_file_path = tkFileDialog.askopenfilename()
 
@@ -57,56 +58,73 @@ f = open(symbols_file_path, "r+b")
 lines = f.readlines()
 f.close()
 
+
+##### Collect symbols by content and set symbols by rva
+
 for line in lines:
+    print line
     linesplit = line.split("          ")
-    symbolstr = linesplit[1].strip()
-    symbolstr = symbolstr.replace(" = <no type information>", "")
-    symbolstr = symbolstr.replace("(<no parameter info>)", "")     
-    symbol = (int(linesplit[0],16), symbolstr)
-    symbols.append(symbol)
-
-symbols = sorted(symbols, key=lambda symbols: symbols[0])
-
-
-
-for seg_ea in Segments():
-
-    for ea in range(seg_ea, SegEnd(seg_ea)):
-        
-        vop1 = None
-        vop2 = None
-        
-        bIsCode = isCode(GetFlags(ea))
-                
-        if bIsCode:
-            op1type = idc.GetOpType(ea, 0)
-            op2type = idc.GetOpType(ea, 1)
-            if op1type == 5 or op1type == 6 or op1type == 7:
-                vop1 = GetOperandValue(ea,0)
-            if op2type == 5 or op2type == 6 or op2type == 7:
-                vop2 = GetOperandValue(ea,1)
-                       
-        v = Dword(ea)
-        
-        isymbol = binarySearch(symbols, v)
-        if vop1 and not isymbol[0]: isymbol = binarySearch(symbols, vop1)
-        if vop2 and not isymbol[0]: isymbol = binarySearch(symbols, vop2)
-        
-        if isymbol[0]:
-            
-            i = isymbol[1]
-            
-            if bIsCode:
-                print "Is code!! %x %s\n" % (ea, symbols[i][1])
-                MakeComm(ItemHead(ea),symbols[i][1])
+    if len(linesplit)>0:
+        symbolstr = linesplit[1].strip()
+        symbolstr = symbolstr.replace(" = <no type information>", "").replace("(<no parameter info>)", "").replace("__CARRIAGE_RETURN__", "\r").replace("__NEWLINE__", "\n")
+        if " byrva" in symbolstr:            
+            symbolstr = symbolstr.replace(" byrva", "")
+            if " comment" in symbolstr:
+                symbolstr = symbolstr.replace(" comment", "")
+                MakeComm(imagebase+int(linesplit[0],16), symbolstr)
+            elif " rptcomment" in symbolstr:
+                symbolstr = symbolstr.replace(" rptcomment", "")
+                MakeRptCmt(imagebase+int(linesplit[0],16), symbolstr)
             else:
-                print "%x %s\n" % (ea, symbols[i][1])
-                MakeUnkn(ea,4)
-                MakeDword(ea)
-                MakeNameEx(ea,symbols[i][1],0)
-                MakeComm(ea,symbols[i][1])
+                MakeNameEx(imagebase+int(linesplit[0],16), symbolstr, 0)            
+        else:
+            symbol = (int(linesplit[0],16), symbolstr)
+            symbols.append(symbol)
+
+##### Set symbols by content
+
+if len(symbols):
+    
+    symbols = sorted(symbols, key=lambda symbols: symbols[0])
+    
+    for seg_ea in Segments():
+    
+        for ea in range(seg_ea, SegEnd(seg_ea)):
             
-            symbols[i] = (symbols[i][0], "_"+symbols[i][1])
+            vop1 = None
+            vop2 = None
+            
+            bIsCode = isCode(GetFlags(ea))
+                    
+            if bIsCode:
+                op1type = idc.GetOpType(ea, 0)
+                op2type = idc.GetOpType(ea, 1)
+                if op1type == 5 or op1type == 6 or op1type == 7:
+                    vop1 = GetOperandValue(ea,0)
+                if op2type == 5 or op2type == 6 or op2type == 7:
+                    vop2 = GetOperandValue(ea,1)
+                           
+            v = Dword(ea)
+            
+            isymbol = binarySearch(symbols, v)
+            if vop1 and not isymbol[0]: isymbol = binarySearch(symbols, vop1)
+            if vop2 and not isymbol[0]: isymbol = binarySearch(symbols, vop2)
+            
+            if isymbol[0]:
+                
+                i = isymbol[1]
+                
+                if bIsCode:
+                    print "Is code!! %x %s\n" % (ea, symbols[i][1])
+                    MakeComm(ItemHead(ea),symbols[i][1])
+                else:
+                    print "%x %s\n" % (ea, symbols[i][1])
+                    MakeUnkn(ea,4)
+                    MakeDword(ea)
+                    MakeNameEx(ea,symbols[i][1],0)
+                    MakeComm(ea,symbols[i][1])
+                
+                symbols[i] = (symbols[i][0], "_"+symbols[i][1])
 
 ################################################        
 

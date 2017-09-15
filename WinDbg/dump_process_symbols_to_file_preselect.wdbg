@@ -1,0 +1,197 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$
+$$ $$>a<dump_process_symbols_to_file_preselect.wdbg <path> <proc>
+$$
+$$ This simple script will dump to a file symbols of a preselection of common dlls of the given process.
+$$ If you dump a PE from memory, it could have variables pointing to symbols (for example, api addresses that it got with GetProcAddress, etc...).
+$$ It is useful to have a list of pairs (symbol, address) because in this way if we open the dumped PE with IDA we can search for that addresses
+$$ and set a name for the variable containing them.
+$$
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    .process /i ${$arg2}
+    g
+    
+    .block
+    {
+        .reload
+    }
+    
+    .block
+    {
+        .reload /user
+    }
+       
+    r $t0 = 0; .foreach ( tok { lm m kernel32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "kernel32";
+        .block { .shell -i- -ci "x kernel32!*" findstr "!">${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m user32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "user32";
+        .block { .shell -i- -ci "x user32!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m advapi32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "advapi32";
+        .block { .shell -i- -ci "x advapi32!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m ws2_32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "ws2_32";
+        .block { .shell -i- -ci "x ws2_32!*" findstr "!">>${$arg1} };
+    }
+
+    r $t0 = 0; .foreach ( tok { lm m wininet } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "wininet";
+        .block { .shell -i- -ci "x wininet!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m ntdll } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "ntdll";
+        .block { .shell -i- -ci "x ntdll!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m crypt32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "crypt32";
+        .block { .shell -i- -ci "x crypt32!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m dnsapi } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "dnsapi";
+        .block { .shell -i- -ci "x dnsapi!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m shlwapi } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "shlwapi";
+        .block { .shell -i- -ci "x shlwapi!*" findstr "!">>${$arg1} };    
+    }
+
+    r $t0 = 0; .foreach ( tok { lm m winhttp } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "winhttp";
+        .block { .shell -i- -ci "x winhttp!*" findstr "!">>${$arg1} };   
+    }
+        
+    r $t0 = 0; .foreach ( tok { lm m sysdm } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "sysdm";
+        .block { .shell -i- -ci "x sysdm!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m rpcrt4 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "rpcrt4";
+        .block { .shell -i- -ci "x rpcrt4!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m iphlpapi } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "iphlpapi";
+        .block { .shell -i- -ci "x iphlpapi!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m powrprof } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "powrprof";
+        .block { .shell -i- -ci "x powrprof!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m gdi32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "gdi32";
+        .block { .shell -i- -ci "x gdi32!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m msvcrt } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "msvcrt";
+        .block { .shell -i- -ci "x msvcrt*!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m msvcp } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "msvcp";
+        .block { .shell -i- -ci "x msvcp*!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m winmm } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    { 
+        .printf "winmn";
+        .block { .shell -i- -ci "x winmm!*" findstr "!">>${$arg1} };
+    }
+
+    r $t0 = 0; .foreach ( tok { lm m gdiplus } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "gdiplus";
+        .block { .shell -i- -ci "x gdiplus!*" findstr "!">>${$arg1} };
+    }
+
+    r $t0 = 0; .foreach ( tok { lm m psapi } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "psapi";
+        .block { .shell -i- -ci "x psapi!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m urlmon } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "urlmon";
+        .block { .shell -i- -ci "x urlmon!*" findstr "!">>${$arg1} };
+    }
+
+    r $t0 = 0; .foreach ( tok { lm m netapi } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "netapi";
+        .block { .shell -i- -ci "x netapi!*" findstr "!">>${$arg1} };
+    }
+    
+    r $t0 = 0; .foreach ( tok { lm m ole32 } ){ r $t0 = @$t0 + 1; }; 
+    .if( $t0 > 4 )
+    {     
+        .printf "netapi";
+        .block { .shell -i- -ci "x ole32!*" findstr "!">>${$arg1} };
+    }    
+    
+}
