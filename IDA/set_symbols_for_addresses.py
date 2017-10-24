@@ -76,7 +76,7 @@ for line in lines:
                 symbolstr = symbolstr.replace(" rptcomment", "")
                 MakeRptCmt(imagebase+int(linesplit[0],16), symbolstr)
             else:
-                MakeNameEx(imagebase+int(linesplit[0],16), symbolstr, 0)            
+                MakeNameEx(imagebase+int(linesplit[0],16), symbolstr.replace("!", "_").replace(" ", ""), 0)
         else:
             symbol = (int(linesplit[0],16), symbolstr)
             symbols.append(symbol)
@@ -121,7 +121,7 @@ if len(symbols):
                     print "%x %s\n" % (ea, symbols[i][1])
                     MakeUnkn(ea,4)
                     MakeDword(ea)
-                    MakeNameEx(ea,symbols[i][1],0)
+                    MakeNameEx(ea,symbols[i][1].replace("!", "_").replace(" ", ""),0)
                     MakeComm(ea,symbols[i][1])
                 
                 symbols[i] = (symbols[i][0], "_"+symbols[i][1])
