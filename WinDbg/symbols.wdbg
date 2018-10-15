@@ -8,6 +8,8 @@ $$
 
 .block
 {
-    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .sympath "SRV*c:\symcache*https://msdl.microsoft.com/download/symbols;SRV*c:\symcache*https://chromium-browser-symsrv.commondatastorage.googleapis.com;SRV*c:\symcache\*https://symbols.mozilla.org/";
     .reload
 }
+
+

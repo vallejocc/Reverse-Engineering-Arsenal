@@ -38,6 +38,8 @@ aS baseaddrlen @$t4
     
     .foreach (processes_tok { !process 0 0 })
     {
+        .printf "${processes_tok}\n"
+
         .if($scmp("${processes_tok}","PROCESS")==0)
         {
             .if(${stage}==2)
@@ -83,7 +85,7 @@ aS baseaddrlen @$t4
             $$ ???????? then it doesnt put spaces. We need to have in mind both case, and this is the reason of the stages of the next code
             $$
             
-            .foreach (tok { .shell -ci "!address" findstr /N /O "UserRange.*ReadWriteExecute" }) 
+            .foreach (tok { .shell -ci "!address" findstr /N /O /R /C:"UserRange.*ExecuteReadWrite" /C:"UserRange.*ReadWriteExecute" }) 
             {
                 r isPossiblePE = 0
                 r isDosMessageBased = 0

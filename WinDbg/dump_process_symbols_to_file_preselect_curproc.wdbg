@@ -4,7 +4,7 @@ $$ Twitter: @vallejocc
 $$ Web: http://www.vallejo.cc
 $$
 $$
-$$ $$>a<dump_process_symbols_to_file_preselect.wdbg <path> <proc>
+$$ $$>a<dump_process_symbols_to_file_preselect.wdbg <path>
 $$
 $$ This simple script will dump to a file symbols of a preselection of common dlls of the given process.
 $$ If you dump a PE from memory, it could have variables pointing to symbols (for example, api addresses that it got with GetProcAddress, etc...).
@@ -20,9 +20,6 @@ $$
 
 .block
 {
-    .process /i ${$arg2}
-    g
-    
     .block
     {
         .reload
