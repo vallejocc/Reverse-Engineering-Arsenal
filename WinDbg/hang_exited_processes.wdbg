@@ -1,0 +1,48 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<c:\tools\@scripts\windbg\hang_exited_processes.wdbg <dir start/end files>
+
+.logopen ${$arg1}\hang_exited_processes.start
+.printf "start"
+.logclose
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+r @$t0 = nt!KeDelayExecutionThread
+r @$t1 = nt!NtTerminateProcess
+
+$$push [interval]
+eb @$t1 0x68  
+ed @$t1+1 @$t1+0x24
+
+$$push FALSE <no alertable>
+eb @$t1+5 0x68 
+ed @$t1+6 0x0
+
+$$push UserMode
+eb @$t1+0xa 0x68 
+ed @$t1+0xb 0x1
+
+$$push 0 <fake ret addr>
+eb @$t1+0xf 0x68 
+ed @$t1+0x10 0x0
+
+$$push nt!KeDelayExecutionThread / ret
+eb @$t1+0x14 0x68
+ed @$t1+0x15 @$t0
+eb @$t1+0x19 0xc3
+
+$$interval
+ed @$t1+0x24 0x00000000  
+ed @$t1+0x28 0xf0000000
+
+.logopen ${$arg1}\hang_exited_processes.end
+.printf "end"
+.logclose

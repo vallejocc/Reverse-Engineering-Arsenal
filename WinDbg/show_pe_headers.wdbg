@@ -1,0 +1,108 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<c:\tools\@scripts\windbg\show_pe_headers.wdbg <base_address> <process>
+
+$$.sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+$$.reload
+
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$ change the context to the target process and page in the page containing PE headers
+.process /i ${$arg2}
+g
+$$.reload /user
+.pagein /p ${$arg2} ${$arg1}
+g
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$ define some useful aliases
+
+ad /q ${/v:$imagebase};
+ad /q ${/v:$pe_header};
+ad /q ${/v:$file_header};
+ad /q ${/v:$optional_header};
+ad /q ${/v:$number_of_sections};
+ad /q ${/v:$sections};
+
+aS /x ${/v:$imagebase} ( ${$arg1} )
+aS /x ${/v:$pe_header} ( $imagebase + ( poi( $imagebase + @@( #FIELD_OFFSET( nt!_IMAGE_DOS_HEADER, e_lfanew ) ) ) ) )
+aS /x ${/v:$file_header} ( $pe_header + @@( #FIELD_OFFSET( nt!_IMAGE_NT_HEADERS, FileHeader ) ) )
+aS /x ${/v:$optional_header} ( $pe_header + @@( #FIELD_OFFSET( nt!_IMAGE_NT_HEADERS, OptionalHeader ) ) )
+aS /x ${/v:$number_of_sections} ( poi ( $file_header + @@( #FIELD_OFFSET( nt!_IMAGE_FILE_HEADER, NumberOfSections ) ) ) & 0xffff )
+aS /x ${/v:$data_directory} ( $optional_header + @@( #FIELD_OFFSET( nt!_IMAGE_OPTIONAL_HEADER, DataDirectory ) ) )
+aS /x ${/v:$sections} ( $pe_header + @@c++( sizeof ( nt!_IMAGE_NT_HEADERS ) ) )
+
+.printf "DOS HEADER:\n"
+.printf "----------:\n"
+dt nt!_IMAGE_DOS_HEADER $imagebase
+.printf "NT HEADERS:\n"
+.printf "----------:\n"
+dt nt!_IMAGE_NT_HEADERS $pe_header
+.printf "FILE HEADER:\n"
+.printf "-----------:\n"
+dt nt!_IMAGE_FILE_HEADER $file_header
+.printf "OPTIONAL HEADER:\n"
+.printf "---------------:\n"
+dt nt!_IMAGE_OPTIONAL_HEADER $optional_header
+.printf "DATA DIRECTORY 0 EXPORT:\n"
+.printf "-----------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 0
+.printf "DATA DIRECTORY 1 IMPORT:\n"
+.printf "-----------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 1
+.printf "DATA DIRECTORY 2 RESOURCE:\n"
+.printf "-------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 2
+.printf "DATA DIRECTORY 3 EXCEPTION:\n"
+.printf "--------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 3
+.printf "DATA DIRECTORY 4 SECURITY:\n"
+.printf "-------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 4
+.printf "DATA DIRECTORY 5 FIXUPS:\n"
+.printf "-----------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 5
+.printf "DATA DIRECTORY 6 DEBUG:\n"
+.printf "----------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 6
+.printf "DATA DIRECTORY 7 DESCRIPTION:\n"
+.printf "----------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 7
+.printf "DATA DIRECTORY 8 MIPS GP:\n"
+.printf "------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 8
+.printf "DATA DIRECTORY 9 TLS:\n"
+.printf "--------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 9
+.printf "DATA DIRECTORY 10 LOAD CONFIG:\n"
+.printf "-----------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 10
+.printf "DATA DIRECTORY 11 BOUND IMPORT:\n"
+.printf "------------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 11
+.printf "DATA DIRECTORY 12 IMPORT TABLE:\n"
+.printf "------------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 12
+.printf "DATA DIRECTORY 13 DELAY IMPORT:\n"
+.printf "------------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 13
+.printf "DATA DIRECTORY 14 COM RUNTIME:\n"
+.printf "-----------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 14
+.printf "DATA DIRECTORY 15 RESERVED:\n"
+.printf "--------------------------:\n"
+dt nt!_IMAGE_DATA_DIRECTORY $data_directory + @@c++( sizeof ( nt!_IMAGE_DATA_DIRECTORY ) ) * 15
+r $t0 = $sections
+r $t1 = 0
+r $t2 = $number_of_sections
+.while (@$t1 < @$t2)
+{
+    .printf "SECTION HEADER %d:\n", @$t1
+    .printf "-----------------:\n"
+    r $t3 = $sections + @$t1 * @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+    dt -b nt!_IMAGE_SECTION_HEADER @$t3
+    r $t1 = @$t1 + 1
+}

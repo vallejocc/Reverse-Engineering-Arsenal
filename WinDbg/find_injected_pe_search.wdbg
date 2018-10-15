@@ -1,0 +1,173 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$ $$>a<find_injected_pe_search.wdbg
+$$
+$$ This windbg script will search for PE headers. Later, it checks !lmi results for checking of the found PE header matchs a loaded module.
+$$ If not, it reports that PE (assuming it could be an unpacked or injected PE).
+$$
+
+$$.sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+$$.reload
+
+$$.foreach ( header {s -[1]d 0x0 L?0xffffffff 0x00905a4d} ) 
+$${
+$$    .echo "****HEADER****"
+$$    !lmi header
+$$}
+
+$$.foreach /ps 0x10 ( header {s 0 L?0x80000000 4d 5a 90 00} ) 
+$${
+$$    .echo "****HEADER****"
+$$    !lmi header
+$$}
+
+aS stage @$t19
+aS temp @$t18
+aS baseSearch @$t17
+aS stop @$t16
+aS temp2 @$t15
+aS temp3 @$t14
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    r stage = 2
+    
+    .foreach (processes_tok { !process 0 0 })
+    {
+        .if($scmp("${processes_tok}","PROCESS")==0)
+        {
+            .if(${stage}==2)
+            {
+                $$stage==2 is used to skip the first apparition of PROCESS string in the results of !process 0 0
+                r stage = 0
+            }
+            .else
+            {            
+                r stage = 1
+            }
+        }
+        .elsif(${stage}==1)
+        {
+            .printf /D "<b>Analyzing process ${processes_tok}</b>\n"
+            
+            r stage = 0
+        
+            .process /i ${processes_tok}
+            g
+            
+            .block
+            {
+                .reload
+            }
+            
+            .block
+            {
+                .reload /user
+            }
+        
+            r ${stop} = 0
+            r ${baseSearch} = 0
+        
+            .while(${stop} == 0)
+            {
+                .printf "searching base %x\n", ${baseSearch}
+                
+                r @$t0 = ${baseSearch}
+                
+                .foreach /ps 0x10 ( header {s @$t0 L?0x10000000 4d 5a 90 00} )
+                {
+                    r temp = 0
+                    r @$t0 = ${header}
+                    
+                    .printf "MZ at ${header}\n"
+                    
+                    .if(poi(${header}+3c) < 0x2ff)
+                    {
+                        .if(poi(${header}+poi(${header}+3c)) == 0x00004550)
+                        {
+                            .printf "PE signature found\n"
+                            
+                            $$search for valid from: is not valid address
+                            .foreach (tok { .shell -ci "!lmi ${header}" findstr /N /O /R /I "valid.address" }) 
+                            {
+                                r temp = ${temp} + 1
+                            }
+                            .printf "search valid address %x\n", ${temp}
+                            
+                            $$ "is not valid address was found"
+                            .if(${temp} > 3)
+                            {
+                                $$ there are some modules that !lmi command is answering: is not valid address, however they seems to be valid loaded modules (not interesing for us). 
+                                $$ However if we consults information about the address with !address we find things as:  
+                                $$ Memory Usage:           Section [\WINDOWS\System32\blablabla.mui] (it happens usually with .mui files, but not only with them
+                                $$ We will discard results of !address with .dll], .mui] and .exe]
+    
+                                r temp = 0                            
+                                .foreach (tok2 { .shell -ci "!address ${header}" findstr /N /O /R /I "\.mui\]" })
+                                {
+                                    r temp = ${temp} + 1
+                                }
+    
+                                r temp2 = 0
+                                .foreach (tok3 { .shell -ci "!address ${header}" findstr /N /O /R /I "\.dll\]" })
+                                {
+                                    r temp2 = ${temp2} + 1
+                                }
+    
+                                r temp3 = 0
+                                .foreach (tok4 { .shell -ci "!address ${header}" findstr /N /O /R /I "\.exe\]" })
+                                {
+                                    r temp3 = ${temp3} + 1
+                                }
+    
+                                .printf "search !address .mui %x\n", ${temp}
+                                .printf "search !address .dll %x\n", ${temp2}
+                                .printf "search !address .exe %x\n", ${temp3}
+    
+                                .if(${temp} < 4 and ${temp2} < 4 and ${temp3} < 4)
+                                {
+                                    .printf /D "<b>---------------------------------------------------------------------------</b>\n"
+                                    .printf /D "<b>Process: ${processes_tok} base: %x -> Possible injected or unpacked PE</b>\n", @$t0
+                                    .printf /D "<b>---------------------------------------------------------------------------</b>\n"
+                                }
+                            }
+                        }
+                        .else
+                        {
+                            .printf "PE signature not found\n"
+                        }
+                    }
+                    .else
+                    {
+                        .printf "Invalid lfanew\n"
+                    }
+                }
+    
+                .if(${baseSearch} >= 0x70000000)
+                {
+                    .printf "next process\n"
+                    r ${stop} = 1
+                }
+                
+                r ${baseSearch} = ${baseSearch} + 0x10000000            
+            }
+        }    
+    }
+    
+    ad stage
+    ad temp
+    ad baseSearch
+    ad stop
+    ad temp2
+    ad temp3
+}

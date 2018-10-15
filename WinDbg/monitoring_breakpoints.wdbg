@@ -1,0 +1,70 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$ $$>a<c:\tools\@scripts\windbg\monitoring_breakpoints.wdbg
+
+.block
+{
+    .sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+    .reload
+}
+
+$$.process /i ${$arg1}
+$$g
+
+$$.reload /user
+
+.block
+{
+    
+    bp /p ${$arg1} kernel32!CreateFileA ".printf /D \"<b>%x - CreateFileA('%ma')</b>\\n\", poi($csp), poi($csp+4) ; gc"
+    bp /p ${$arg1} kernel32!CreateFileW ".printf /D \"<b>%x - CreateFileW('%mu')</b>\\n\", poi($csp), poi($csp+4) ; gc"
+    
+    bp /p ${$arg1} advapi32!RegOpenKeyA ".printf /D \"<b>%x - RegOpenKeyA(%x,%ma)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegOpenKeyW ".printf /D \"<b>%x - RegOpenKeyW(%x,%mu)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegCreateKeyA ".printf /D \"<b>%x - RegCreateKeyA(%x,%ma)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegCreateKeyW ".printf /D \"<b>%x - RegCreateKeyW(%x,%mu)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegSetValueA ".printf /D \"<b>%x - RegSetValueA(%x,%ma)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegSetValueW ".printf /D \"<b>%x - RegSetValueW(%x,%mu)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegSetValueExA ".printf /D \"<b>%x - RegSetValueExA(%x,%ma)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} advapi32!RegSetValueExW ".printf /D \"<b>%x - RegSetValueExW(%x,%mu)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    
+    bp /p ${$arg1} kernel32!LoadLibraryW ".printf /D \"<b>%x - LoadLibraryW('%mu')</b>\\n\", poi($csp), poi($csp+4) ; gc"
+    
+    bp /p ${$arg1} kernel32!WriteProcessMemory ".printf /D \"<b>%x - WriteProcessMemory(%x, %x, %ma)-></b>\", poi($csp), poi($csp+4), poi($csp+4*2), poi($csp+3*4); $$>a<$$>a<c:\\tools\\@scripts\\windbg\\show_proc_from_handle.wdbg poi($csp+4);.printf \"\\n\"; gc"
+    bp /p ${$arg1} kernel32!CreateRemoteThread ".printf /D \"<b>%x - CreateRemoteThread(%x, %x)-></b>\", poi($csp), poi($csp+4), poi($csp+4*4); $$>a<c:\\tools\\@scripts\\windbg\\show_proc_from_handle.wdbg poi($csp+4);.printf \"\\n\"; gc"
+    bp /p ${$arg1} kernel32!CreateProcessA ".printf /D \"<b>%x - CreateProcessA(%ma,%ma)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    bp /p ${$arg1} kernel32!CreateProcessW ".printf /D \"<b>%x - CreateProcessW(%mu,%mu)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    
+    bp /p ${$arg1} wininet!InternetOpenA ".printf /D \"<b>%x - InternetOpenA()</b>\\n\", poi($csp); gc"
+    bp /p ${$arg1} wininet!InternetOpenW ".printf /D \"<b>%x - InternetOpenW()</b>\\n\", poi($csp); gc"
+    bp /p ${$arg1} wininet!InternetOpenUrlA ".printf /D \"<b>%x - InternetOpenA(%ma,%ma)</b>\\n\", poi($csp), poi($csp+2*4), poi($csp+3*4) ; gc"
+    bp /p ${$arg1} wininet!InternetOpenUrlW ".printf /D \"<b>%x - InternetOpenW(%mu,%mu)</b>\\n\", poi($csp), poi($csp+2*4), poi($csp+3*4) ; gc"
+    
+    $$bp /p ${$arg1} kernel32!CreateWaitableTimerW ".printf /D \"<b>%x - CreateWaitableTimerW('%mu')</b>\\n\", poi($csp), poi($csp+3*4) ; gc"
+    $$bp /p ${$arg1} kernel32!GetTickCount "$$ .printf /D \"<b>%x - GetTickCount()</b>\\n\" , poi($csp); r eax = 0 ; r eip = poi($csp) ; r esp = esp + 4 ; gc"
+    $$bp /p ${$arg1} kernel32!Sleep ".printf /D \"<b>%x - Sleep(%ds)</b>\\n\", poi($csp), poi($csp+4)/0n1000 ; r eip = poi($csp) ; r esp = esp + 8 ; gc"
+    
+    bp /p ${$arg1} kernel32!ExitProcess ".printf /D \"<b>%x - ExitProcess()</b>\\n\", poi($csp); gc"
+    
+    bp /p ${$arg1} kernel32!VirtualProtect ".printf /D \"<b>%x - VirtualProtect(%p, %x, %x)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4), poi($csp+3*4) ; gc"
+    bp /p ${$arg1} kernel32!VirtualProtectEx ".printf /D \"<b>%x - VirtualProtectEx(%p, %x, %x)-></b>\", poi($csp), poi($csp+2*4), poi($csp+3*4), poi($csp+4*4) ; $$>a<c:\\tools\\@scripts\\windbg\\show_proc_from_handle.wdbg poi($csp+4);.printf \"\\n\"; gc"
+    
+    bp /p ${$arg1} advapi32!CryptGenKey ".printf /D \"<b>%x - CryptGenKey(%x, %x)</b>\\n\", poi($csp), poi($csp+2*4), poi($csp+3*4) ; gc"
+    bp /p ${$arg1} advapi32!CryptImportKey ".printf /D \"<b>%x - CryptImportKey(%p, %x, %x)</b>\\n\", poi($csp), poi($csp+2*4), poi($csp+3*4), poi($csp+5*4); gc"
+    bp /p ${$arg1} advapi32!CryptDecrypt ".printf /D \"<b>%x - CryptDecrypt(%x, %p, %p)</b>\\n\", poi($csp), poi($csp+4*4), poi($csp+5*4), poi($csp+6*4); gc"
+    bp /p ${$arg1} advapi32!CryptEncrypt ".printf /D \"<b>%x - CryptEncrypt(%x, %p, %p, %x)</b>\\n\", poi($csp), poi($csp+4*4), poi($csp+5*4), poi($csp+6*4), poi($csp+7*4); gc"
+    
+    $$bp /p ${$arg1} kernel32!CreateToolhelp32Snapshot ".printf /D \"<b>%x - CreateToolhelp32Snapshot(%x, %x)</b>\\n\", poi($csp), poi($csp+4), poi($csp+2*4) ; gc"
+    $$bp /p ${$arg1} kernel32!Process32First ".printf /D \"<b>%x - Process32First()</b>\\n\", poi($csp); gc"
+    $$bp /p ${$arg1} kernel32!Process32Next ".printf /D \"<b>%x - Process32Next()</b>\\n\", poi($csp); gc"
+    $$bp /p ${$arg1} kernel32!Thread32First ".printf /D \"<b>%x - Thread32First()</b>\\n\", poi($csp); gc"
+    $$bp /p ${$arg1} kernel32!Thread32Next ".printf /D \"<b>%x - Thread32Next()</b>\\n\", poi($csp); gc"
+    $$bp /p ${$arg1} kernel32!Module32First ".printf /D \"<b>%x - Module32First()</b>\\n\", poi($csp); gc"
+    $$bp /p ${$arg1} kernel32!Module32Next ".printf /D \"<b>%x - Module32Next()</b>\\n\", poi($csp); gc"
+    
+    sxd sse
+    
+}

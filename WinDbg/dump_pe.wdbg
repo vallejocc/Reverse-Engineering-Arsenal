@@ -1,0 +1,90 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<c:\tools\@scripts\windbg\dump_pe.wdbg <base_address> <process> <path>
+
+$$     it uses t0, t1 and t2
+
+$$.sympath SRV*c:\symcache*http://msdl.microsoft.com/download/symbols
+$$.reload
+
+.printf "dump pe base address %x, process %x\n", ${$arg1}, ${$arg2}
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$ change the context to the target process and page in the page containing PE headers
+.process /i ${$arg2}
+g
+$$.reload /user
+.pagein /p ${$arg2} ${$arg1}
+g
+
+.block
+{
+
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$ define some useful aliases
+    
+    ad /q ${/v:$imagebase};
+    ad /q ${/v:$pe_header};
+    ad /q ${/v:$file_header};
+    ad /q ${/v:$optional_header};
+    ad /q ${/v:$number_of_sections};
+    ad /q ${/v:$sections};
+    
+    aS /x ${/v:$imagebase} ( ${$arg1} )
+    aS /x ${/v:$pe_header} ( $imagebase + ( poi( $imagebase + @@( #FIELD_OFFSET( nt!_IMAGE_DOS_HEADER, e_lfanew ) ) ) ) )
+    aS /x ${/v:$file_header} ( $pe_header + @@( #FIELD_OFFSET( nt!_IMAGE_NT_HEADERS, FileHeader ) ) )
+    aS /x ${/v:$optional_header} ( $pe_header + @@( #FIELD_OFFSET( nt!_IMAGE_NT_HEADERS, OptionalHeader ) ) )
+    aS /x ${/v:$number_of_sections} ( poi ( $file_header + @@( #FIELD_OFFSET( nt!_IMAGE_FILE_HEADER, NumberOfSections ) ) ) & 0xffff )
+    aS /x ${/v:$sections} ( $pe_header + @@c++( sizeof ( nt!_IMAGE_NT_HEADERS ) ) )
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$ we are going to set sections' raw offset = virtual address for coherency in the dumped PE
+    
+    r $t0 = $sections
+    r $t1 = 0
+    r $t2 = $number_of_sections
+    
+    .while (@$t1 < @$t2)
+    {
+        r $t3 = $sections + @$t1 * @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+        $$.printf "%x\n", @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t3 )->VirtualAddress )
+        $$.printf "%x\n", @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t3 )->PointerToRawData )
+        r $t4 = @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t3 )->VirtualAddress )
+        r $t5 = @$t3 + @@( #FIELD_OFFSET( nt!_IMAGE_SECTION_HEADER, PointerToRawData ) )
+        ed $t5 $t4
+        r $t1 = @$t1 + 1
+    }
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$ now we are going to page in all the pages of the PE file in memory
+    
+    r $t0 = $sections + ( $number_of_sections - 1 ) * @@c++(sizeof(nt!_IMAGE_SECTION_HEADER))
+    r $t1 = $imagebase + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t0 )->VirtualAddress ) + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t0 )->Misc.VirtualSize )
+    r $t2 = $imagebase + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t0 )->VirtualAddress ) + @@c++( ( ( nt!_IMAGE_SECTION_HEADER * ) @$t0 )->SizeOfRawData )
+    
+    .if ($t2 > $t1) { r $t1 = $t2 } 
+    
+    r $t0 = $imagebase
+    
+    ? $t0
+    ? $t1
+    
+    .while (@$t0 < @$t1)
+    {
+        .printf "paging in: %x\n", @$t0
+        .pagein /p ${$arg2} @$t0
+        g
+        r $t0 = @$t0 + 0x1000;
+    };
+    
+    ? $t1 - $imagebase
+    
+    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    $$ finally we are going to write the entire PE file to disk
+    
+    .writemem ${$arg3} $imagebase L $t1 - $imagebase
+
+}    

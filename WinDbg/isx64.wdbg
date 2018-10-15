@@ -1,0 +1,27 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+aS x64arch $t0
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.block
+{
+    $$is x64?
+    r x64arch = 0; 
+    .foreach( tok { .effmach } ) 
+    {
+        .if($scmp("${tok}","x64")==0)
+        {
+            r x64arch = 1;
+            .break;
+        };
+    };
+}

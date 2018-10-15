@@ -1,0 +1,147 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$     $$>a<c:\tools\@scripts\windbg\find_objects_by_name.wdbg <process> <type> <name matching word>
+$$
+$$     Types: Event, Section, File, Port, Directory, SymbolicLink, Mutant, WindowStation, Semaphore, Key, Token, Process, Thread, Desktop, IoCompletion, Timer, Job, and WaitablePort
+$$     
+$$     If process == 0, all processes
+$$     If type == All, search all types
+$$     If name matching word == *, any name
+
+aS stage @$t19
+aS lastproc @$t18
+aS lastobject @$t17
+aS lasttypevalid @$t16
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+
+.block
+{    
+    $$ STAGE == 1 last token was PROCESS
+    $$ STAGE == 2 last token was Directory
+    $$ STAGE == 3 last token was Object:
+    $$ STAGE == 4 last token was Name:
+    $$ STAGE == 5 last token was Type:
+    
+    r stage = 0
+    
+    .foreach (handle_tok { !handle 0 3 ${$arg1} ${$arg2} })
+    {
+        $$ .printf "token = ${handle_tok}\n"
+        
+        .if($scmp("\${handle_tok}","\\")==0)
+        {
+        }
+        .else
+        {    
+            .if(${stage}==1)
+            {
+                .if($scmp("${handle_tok}","HANDLE")!=0)
+                {
+                    $$ .printf "stage1 ${handle_tok}\n"
+                    r ${lastproc} = ${handle_tok}
+                }
+                r stage = 0
+            }
+            .elsif(${stage}==2)
+            {
+                $$ if Directory found, skip next Object: word
+                $$ .printf "stage2\n"
+                r stage = 0
+            }
+            .elsif(${stage}==3)
+            {
+                $$ .printf "stage3 ${handle_tok}\n"
+                r ${lastobject} = ${handle_tok}
+                r stage = 0
+            }
+            .elsif(${stage}==4)
+            {
+                $$ .printf "stage4\n"
+                .if(${lasttypevalid}==1)
+                {
+                    r @$t0 = 0
+                    
+                    .if($scmp("*","${$arg3}")==0)
+                    {
+                        r @$t0 = 4
+                    }
+                    .else
+                    {
+                        .foreach (toktemp { .shell -ci "!object ${lastobject}" findstr /N /O "${$arg3}" })
+                        {
+                            r @$t0 = @$t0 + 1
+                        }
+                    }
+                    
+                    .if(@$t0 > 3)
+                    {
+                        .printf "Process %x ", ${lastproc}
+                        !object ${lastobject}
+                    }
+                }
+                r stage = 0
+            }
+            .elsif(${stage}==5)
+            {
+                r stage = 6
+            }
+            .elsif(${stage}==6)
+            {
+                $$ .printf "stage6 ${handle_tok}\n"
+                r lasttypevalid = 0
+                .if($scmp("${handle_tok}","${$arg2}")==0)
+                {
+                    r lasttypevalid = 1
+                }
+                .if($scmp("All","${$arg2}")==0)
+                {
+                    r lasttypevalid = 1
+                }   
+                r stage = 0
+            }
+            .elsif($scmp("${handle_tok}","PROCESS")==0)
+            {
+                $$ .printf "PROCESS\n"
+                r stage = 1
+            }
+        
+            .elsif($scmp("${handle_tok}","Directory")==0)
+            {
+                $$ .printf "Image:\n"
+                r stage = 2
+            }
+            
+            .elsif($scmp("${handle_tok}","Object:")==0)
+            {
+                $$ .printf "Object:\n"
+                r stage = 3
+            }
+            
+            .elsif($scmp("${handle_tok}","Name:")==0)
+            {
+                $$ .printf "Name:\n"
+                r stage = 4
+            }        
+        
+            .elsif($scmp("${handle_tok}","Type:")==0)
+            {
+                $$ .printf "Type:\n"
+                r stage = 5
+            }  
+        }     
+    }
+
+    ad stage
+    ad lastproc
+    ad lastobject
+    ad lasttypevalid
+}

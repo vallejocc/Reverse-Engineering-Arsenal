@@ -1,0 +1,92 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+$$ $$>a<c:\tools\@scripts\windbg\dump_main_module.wdbg <targetdir> <modname with ext> <modname without ext>
+
+.logopen ${$arg1}\dump_main_module.start
+.printf "start"
+.logclose
+
+
+aS stage @$t19
+aS base @$t18
+aS end @$t17
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload /f
+}
+
+.block
+{
+    r stage = 2
+    
+    .printf "xxxx"
+    
+    .foreach (processes_tok { !process /m ${$arg2} 0 0 })
+    {
+        .if($scmp("${processes_tok}","PROCESS")==0)
+        {
+            .if(${stage}==2)
+            {
+                $$stage==2 is used to skip the first apparition of PROCESS string in the results of !process 0 0
+                r stage = 0
+            }
+            .else
+            {            
+                r stage = 1
+            }
+        }
+        .elsif(${stage}==1)
+        {
+            .printf /D "<b>Dumping main module for process ${processes_tok}</b>\n"
+            
+            r stage = 0
+            
+            .process /i ${processes_tok}
+            g
+            
+            .reload /f
+            
+            .foreach (lmi_tok { lmi m ${$arg3} })
+            {
+                r stage = stage + 1
+                
+                .if(${stage}==5)
+                {
+                    .printf "${lmi_tok}\r\n"
+                    r base = ${lmi_tok}
+                }
+                .if(${stage}==6)
+                {
+                    .printf "${lmi_tok}\r\n"
+                    r end = ${lmi_tok}
+                }
+            }
+            
+            .if (${end} - ${base} > 0x100000) { r end = ${base} + 0x100000 }
+            
+            .foreach /pS 4 (baseaddr_tok { ? ${base} })
+            {
+                .foreach /pS 4 (endaddr_tok { ? ${end} })
+                {
+                    .printf "[${processes_tok}] ${baseaddr_tok} - ${endaddr_tok}\r\n"
+                    
+                    .block
+                    {
+                        $$>a<c:\tools\@scripts\windbg\secure_writemem.wdbg ${baseaddr_tok} ${endaddr_tok} ${processes_tok} ${$arg1} mainmod.pedmp
+                    }
+                }
+            }
+            
+            r stage = 0
+        }
+    }
+}
+
+.logopen ${$arg1}\dump_main_module.end
+.printf "end"
+.logclose

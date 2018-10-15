@@ -1,0 +1,44 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+aS stage @$t19
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+r stage = 0
+
+.foreach( tok { !devobj "${$arg1}" } )
+{
+    .printf "${tok}\r\n"    
+
+    .if(${stage}==1)
+    {
+        .echo ${tok}
+        dt _DEVICE_OBJECT ${tok}        
+        r $t0 = ${tok}
+        dt _SECURITY_DESCRIPTOR @@c++( ( ( nt!_DEVICE_OBJECT * ) @$t0 )->SecurityDescriptor )
+        
+        ep @@c++( ( ( nt!_DEVICE_OBJECT * ) @$t0 )->SecurityDescriptor ) + @@c++( #FIELD_OFFSET( _SECURITY_DESCRIPTOR, Sacl ) ) 0
+        ep @@c++( ( ( nt!_DEVICE_OBJECT * ) @$t0 )->SecurityDescriptor ) + @@c++( #FIELD_OFFSET( _SECURITY_DESCRIPTOR, Dacl ) ) 0
+        
+        dt _SECURITY_DESCRIPTOR @@c++( ( ( nt!_DEVICE_OBJECT * ) @$t0 )->SecurityDescriptor )
+        
+        .break
+    }    
+    
+    .if(${stage}==0)
+    {
+        .if($scmp("${tok}","object")==0)
+        {
+            r stage = 1
+        }
+    }
+}
+

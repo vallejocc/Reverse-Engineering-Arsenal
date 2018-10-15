@@ -1,0 +1,22 @@
+$$
+$$ Author: Javier Vicente Vallejo
+$$ Twitter: @vallejocc
+$$ Web: http://www.vallejo.cc
+$$
+
+$$  $$>a<write_mem_dump.wdbg <destination directory>
+
+.logopen ${$arg1}\write_mem_dump.start
+.logclose
+
+
+.block
+{
+    .sympath "SRV*c:\symcache*http://msdl.microsoft.com/download/symbols";
+    .reload
+}
+
+.dump /f ${$arg1}\memory.dmp
+
+.logopen ${$arg1}\write_mem_dump.end
+.logclose
