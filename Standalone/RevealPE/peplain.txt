@@ -1,2 +1,0 @@
-is program cannot be run in DOS mode
-This program must be run under Win32

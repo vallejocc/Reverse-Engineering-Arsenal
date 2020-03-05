@@ -1,6 +1,0 @@
-his program cannot be run in DOS mode
-his program must be run under Win32
-This program cannot be run in DOS mode
-is program must be run under Win32
-s program cannot be run in DOS mode
-s program must be run under Win32
