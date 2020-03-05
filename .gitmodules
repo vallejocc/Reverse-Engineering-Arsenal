@@ -1,0 +1,3 @@
+[submodule "standalone/RevealPE"]
+	path = standalone/RevealPE
+	url = https://github.com/vallejocc/RevealPE.git
