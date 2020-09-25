@@ -1,3 +1,6 @@
 [submodule "standalone/RevealPE"]
 	path = standalone/RevealPE
 	url = https://github.com/vallejocc/RevealPE.git
+[submodule "IDA/IdaDiscover"]
+	path = IDA/IdaDiscover
+	url = https://github.com/vallejocc/idaDiscover.git
